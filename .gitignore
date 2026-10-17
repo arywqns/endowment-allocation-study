@@ -1,0 +1,11 @@
+.venv/
+.uv-cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+.matplotlib/
+.env
+.env.*
+data/raw/
+archive/
+RESUME_BULLETS.md

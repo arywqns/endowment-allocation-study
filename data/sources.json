@@ -1,0 +1,75 @@
+[
+  {
+    "id": "yahoo_SEQUX",
+    "required_for_analysis": false,
+    "path": "data/raw/SEQUX_daily_yahoo.json",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/SEQUX?period1=1417392000&period2=1735776000&interval=1d&events=history&includeAdjustedClose=true",
+    "retrieved_at_utc": "2026-10-16T20:56:06Z",
+    "sha256": "6879c31288d52e3854371b95f2bd433a6e5725dc4623f3bc09a027f503160267",
+    "description": "Yahoo Finance chart daily adjusted close; total-return proxy using split/dividend-adjusted prices",
+    "kind": "market_data"
+  },
+  {
+    "id": "yahoo_DODGX",
+    "required_for_analysis": false,
+    "path": "data/raw/DODGX_daily_yahoo.json",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/DODGX?period1=1417392000&period2=1735776000&interval=1d&events=history&includeAdjustedClose=true",
+    "retrieved_at_utc": "2026-10-16T20:56:07Z",
+    "sha256": "482fcaca01bd09ee6844503a771080730f364c2b5e8b8cab8b505e7f1859b806",
+    "description": "Yahoo Finance chart daily adjusted close; total-return proxy using split/dividend-adjusted prices",
+    "kind": "market_data"
+  },
+  {
+    "id": "yahoo_SPY",
+    "required_for_analysis": false,
+    "path": "data/raw/SPY_daily_yahoo.json",
+    "url": "https://query1.finance.yahoo.com/v8/finance/chart/SPY?period1=1417392000&period2=1735776000&interval=1d&events=history&includeAdjustedClose=true",
+    "retrieved_at_utc": "2026-10-16T20:56:08Z",
+    "sha256": "5502fb407f7c33e9e158e4ad7539aafa057d74433550e83ddd969ef2859b8d62",
+    "description": "Yahoo Finance chart daily adjusted close; total-return proxy using split/dividend-adjusted prices",
+    "kind": "market_data"
+  },
+  {
+    "id": "sequoia_2024_tsr",
+    "required_for_analysis": false,
+    "url": "https://www.sequoiafund.com/wp-content/uploads/2025/02/SEQUX10-Sequoia-Fund_TSR-12.31.2024-Final-for-ADA-request.pdf",
+    "path": "data/raw/sequoia_2024_tsr.pdf",
+    "description": "Sequoia Fund tailored shareholder report, December 31 2024; sponsor performance and top holdings",
+    "kind": "sponsor_document",
+    "retrieved_at_utc": "2026-10-16T20:58:47Z",
+    "sha256": "c47ee829fd630d0f7b3bae5ad037f024e9d57c532c243d376f2301c9d211d05f"
+  },
+  {
+    "id": "dodge_cox_2024_review",
+    "required_for_analysis": false,
+    "url": "https://www.dodgeandcox.com/individual-investor/us/en/insights/2024-annual-investment-reviews/us-equity-strategy.html",
+    "path": "data/raw/dodge_cox_2024_review.html",
+    "description": "Dodge and Cox 2024 US equity review, sponsor performance and top holdings",
+    "kind": "sponsor_document",
+    "retrieved_at_utc": "2026-10-16T20:58:49Z",
+    "sha256": "e48a54f520cf853916a11680491c96494d3bb91627150e8e7f2e346212d43924"
+  },
+  {
+    "id": "monthly_returns",
+    "path": "data/monthly_returns.csv",
+    "kind": "derived",
+    "input_ids": [
+      "yahoo_SEQUX",
+      "yahoo_DODGX",
+      "yahoo_SPY"
+    ],
+    "description": "Monthly adjusted-close ratios for three investments, with December 2014 as the starting price; no returns filled or altered",
+    "sha256": "d5683aa37168f5ed820d751c0c25acac8dbcca6713c1c0ab4b2b1633b5f67c46"
+  },
+  {
+    "id": "sponsor_returns",
+    "path": "data/sponsor_returns.csv",
+    "kind": "derived",
+    "input_ids": [
+      "sequoia_2024_tsr",
+      "dodge_cox_2024_review"
+    ],
+    "description": "Five transcribed sponsor return checkpoints with source periods and return definitions",
+    "sha256": "2370e6f7e82932aac8723159e7f6ef7fb69d87511242b8598c5daca19b2b3170"
+  }
+]

@@ -1,0 +1,6 @@
+ticker,period_start,period_end,metric,sponsor_return,source_id,notes
+SEQUX,2024-01-01,2024-12-31,cumulative_return,0.207900000000,sequoia_2024_tsr,NAV total return; sponsor tailored shareholder report; vendor adjusted-close proxy is compared without alteration
+SEQUX,2015-01-01,2024-12-31,cagr,0.080200000000,sequoia_2024_tsr,Ten-year NAV CAGR; rounded sponsor figure; vendor adjustment discrepancy retained
+DODGX,2024-01-01,2024-12-31,cumulative_return,0.145200000000,dodge_cox_2024_review,Class I DODGX NAV total return; sponsor annual investment review explicitly reports 14.52%; vendor discrepancy retained
+DODGX,2020-01-01,2024-12-31,cagr,0.119900000000,dodge_cox_2024_review,Class I five-year NAV CAGR; sponsor rounded figure
+DODGX,2015-01-01,2024-12-31,cagr,0.108500000000,dodge_cox_2024_review,Class I ten-year NAV CAGR; sponsor rounded figure
