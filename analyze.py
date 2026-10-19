@@ -18,7 +18,8 @@ matplotlib.use("Agg")  # Save charts without needing a GUI or internet connectio
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter, StrMethodFormatter
 
-# Assumptions for a hypothetical university endowment.
+# Deliberately severe hypothetical case; rationale is in README.md.
+# Spending is fixed at 5% of beginning NAV, not a changing payout formula.
 INITIAL_NAV = 5_000_000_000
 ANNUAL_SPENDING = 250_000_000
 UNFUNDED_COMMITMENTS = 1_000_000_000
@@ -42,6 +43,8 @@ def verify_sources(root=ROOT):
         # Original downloads are kept locally; the public copy uses the tables.
         if not path.exists() and not source.get("required_for_analysis", True):
             continue
+        if "sha256" not in source:
+            continue  # Citation only; no assertion of archived byte provenance.
         actual_hash = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual_hash != source["sha256"]:
             raise ValueError(f"Cached source changed: {source['path']}")
@@ -68,6 +71,21 @@ def load_returns(root=ROOT):
     returns = pd.read_csv(root / "data/monthly_returns.csv", parse_dates=["date"], index_col="date")
     validate_returns(returns)
     return returns
+
+
+def validate_assumptions():
+    if set(POLICY) != {"us_equity", "international_equity", "bonds", "hedge_funds", "private_markets", "cash"}:
+        raise ValueError("Unexpected policy asset buckets.")
+    if any(not math.isfinite(x) or x < 0 for x in POLICY.values()) or not math.isclose(sum(POLICY.values()), 1):
+        raise ValueError("Policy weights must be finite, nonnegative and sum to one.")
+    if set(LOSSES) != {"equity", "bonds", "hedge_funds", "private_markets"} or any(not math.isfinite(x) or not 0 <= x <= 1 for x in LOSSES.values()):
+        raise ValueError("Losses must be fractions between zero and one.")
+    if not CALL_FRACTIONS or len(set(CALL_FRACTIONS)) != len(CALL_FRACTIONS) or any(not math.isfinite(x) or not 0 <= x <= 1 for x in CALL_FRACTIONS):
+        raise ValueError("Call scenarios must be distinct fractions between zero and one.")
+    if not SIZES or any(not math.isfinite(x) or not 0 <= x <= POLICY["us_equity"] for x in SIZES):
+        raise ValueError("Manager allocations must fit within the funding sleeve.")
+    if not math.isfinite(EQUITY_SALE_HAIRCUT) or not 0 <= EQUITY_SALE_HAIRCUT < 1:
+        raise ValueError("Equity sale deduction must be below 100%.")
 
 
 def compound_return(monthly_returns):
@@ -123,7 +141,15 @@ def sponsor_comparison(returns):
     checks = pd.read_csv(ROOT / "data/sponsor_returns.csv")
     observed = []
     for row in checks.to_dict("records"):
-        monthly = returns.loc[row["period_start"]:row["period_end"], row["ticker"]]
+        if row["ticker"] not in TICKERS or row["metric"] not in {"cagr", "cumulative_return"}:
+            raise ValueError("Invalid sponsor ticker or return metric.")
+        start, end = pd.Timestamp(row["period_start"]), pd.Timestamp(row["period_end"])
+        monthly = returns.loc[start:end, row["ticker"]]
+        expected = pd.period_range(start, end, freq="M")
+        if monthly.empty or not monthly.index.to_period("M").equals(expected):
+            raise ValueError("Sponsor checkpoint must cover a complete period within the sample.")
+        if not math.isfinite(row["sponsor_return"]) or row["sponsor_return"] <= -1:
+            raise ValueError("Invalid sponsor return.")
         if row["metric"] == "cagr":
             vendor_return = compound_return(monthly)
         else:
@@ -135,10 +161,21 @@ def sponsor_comparison(returns):
     return checks
 
 
-def liquidity_stress(call_fraction=.80, initial_nav=INITIAL_NAV,
-                     annual_spending=ANNUAL_SPENDING, initial_commitments=UNFUNDED_COMMITMENTS,
-                     reserve=MINIMUM_CASH):
-    """Apply one market shock, then follow cash and investments for 12 months."""
+def liquidity_stress(call_fraction=None, initial_nav=None,
+                     annual_spending=None, initial_commitments=None,
+                     reserve=None, equity_haircut=None, call_timing="even"):
+    # Resolve defaults at call time, so changing case assumptions changes all outputs.
+    validate_assumptions()
+    call_fraction = CALL_FRACTIONS[0] if call_fraction is None else call_fraction
+    initial_nav = INITIAL_NAV if initial_nav is None else initial_nav
+    annual_spending = ANNUAL_SPENDING if annual_spending is None else annual_spending
+    initial_commitments = UNFUNDED_COMMITMENTS if initial_commitments is None else initial_commitments
+    reserve = MINIMUM_CASH if reserve is None else reserve
+    equity_haircut = EQUITY_SALE_HAIRCUT if equity_haircut is None else equity_haircut
+    if not math.isfinite(equity_haircut) or not 0 <= equity_haircut < 1:
+        raise ValueError("Equity sale deduction must be finite and below 100%.")
+    if call_timing not in {"even", "front_loaded"}:
+        raise ValueError("Call timing must be even or front_loaded.")
     if not 0 <= call_fraction <= 1:
         raise ValueError("The fraction of commitments called must be between 0 and 1.")
     for amount in [initial_nav, annual_spending, initial_commitments, reserve]:
@@ -161,8 +198,9 @@ def liquidity_stress(call_fraction=.80, initial_nav=INITIAL_NAV,
     rows = []
     for month in range(1, 13):
         # 1. Add this month's bills to anything still unpaid from last month.
-        uncalled_commitments = remaining_commitments - unpaid_calls
-        new_calls = min(scheduled_monthly_call, uncalled_commitments)
+        uncalled_commitments = max(0, remaining_commitments - unpaid_calls)
+        scheduled = scheduled_monthly_call if call_timing == "even" else (initial_commitments * call_fraction if month == 1 else 0)
+        new_calls = min(scheduled, uncalled_commitments)
         spending_due = unpaid_spending + monthly_spending
         calls_due = unpaid_calls + new_calls
         cash_needed = max(0, spending_due + calls_due + reserve - cash)
@@ -173,9 +211,9 @@ def liquidity_stress(call_fraction=.80, initial_nav=INITIAL_NAV,
         cash += bond_sales
         # 3. Sell equity for any remaining cash need. A $100 sale brings in $95.
         remaining_cash_needed = max(0, cash_needed - bond_sales)
-        equity_to_sell = remaining_cash_needed / (1 - EQUITY_SALE_HAIRCUT)
+        equity_to_sell = remaining_cash_needed / (1 - equity_haircut)
         equity_sales = min(equity, equity_to_sell)
-        sale_costs = equity_sales * EQUITY_SALE_HAIRCUT
+        sale_costs = equity_sales * equity_haircut
         equity -= equity_sales
         cash += equity_sales - sale_costs
 
@@ -194,7 +232,8 @@ def liquidity_stress(call_fraction=.80, initial_nav=INITIAL_NAV,
         total_nav = cash + bonds + equity + hedge_funds + private_nav - unpaid_spending
         valuation_loss = initial_loss if month == 1 else 0
         expected_nav = previous_nav - valuation_loss - monthly_spending - sale_costs
-        rows.append({"month": month, "beginning_nav": previous_nav, "valuation_loss": valuation_loss,
+        rows.append({"equity_sale_haircut": equity_haircut, "call_timing": call_timing, "cash_target": reserve,
+                     "month": month, "beginning_nav": previous_nav, "valuation_loss": valuation_loss,
                      "spending_due": spending_due, "new_calls": new_calls,
                      "spending_paid": spending_paid, "calls_paid": calls_paid,
                      "bond_sales": bond_sales, "equity_sales": equity_sales, "sale_costs": sale_costs,
@@ -212,14 +251,18 @@ def liquidity_stress(call_fraction=.80, initial_nav=INITIAL_NAV,
 
 def stress_summary(monthly):
     rows = []
-    for fraction, scenario in monthly.groupby("call_fraction"):
+    for fraction, scenario in monthly.groupby("call_fraction", sort=False):
         last = scenario.iloc[-1]
         rows.append({"call_fraction": fraction, "total_calls_paid": scenario.calls_paid.sum(),
                      "total_spending_paid": scenario.spending_paid.sum(),
                      "total_bond_sales": scenario.bond_sales.sum(), "total_equity_sales": scenario.equity_sales.sum(),
                      "total_sale_costs": scenario.sale_costs.sum(), "ending_cash": last.cash,
                      "ending_private_nav": last.private_nav, "ending_nav": last.total_nav,
-                     "private_weight": last.private_nav / last.total_nav,
+                     "private_weight": last.private_nav / last.total_nav if last.total_nav > 0 else float("nan"),
+                     "ending_bonds": last.bonds, "ending_equity": last.equity,
+                     "locked_weight": (last.private_nav + last.hedge_funds) / last.total_nav if last.total_nav > 0 else float("nan"),
+                     "ending_realizable_liquidity": last.cash + last.bonds + last.equity * (1 - last.equity_sale_haircut),
+                     "funding_failure": bool((scenario.unpaid_obligations > .01).any()),
                      "remaining_commitments": last.remaining_commitments,
                      "unpaid_obligations": last.unpaid_obligations,
                      "max_reserve_shortfall": scenario.reserve_shortfall.max()})
@@ -239,10 +282,11 @@ def save_charts(returns, monthly, folder):
     for ticker in TICKERS:
         ax.plot(growth.index, growth[ticker], label=ticker, color=COLORS[ticker])
     ax.set(title="Growth of $100, 2015–2024", ylabel="Investment value",
-           xlabel="Monthly total returns; starting value at December 2014")
+           xlabel="Month-end adjusted-price return proxy; starting value at December 2014")
     ax.yaxis.set_major_formatter(StrMethodFormatter("${x:,.0f}"))
     ax.legend(frameon=False)
     ax.grid(axis="y", alpha=.2)
+    fig.supxlabel("Source: supplied Yahoo-derived monthly returns, January 2015-December 2024; sponsor discrepancies disclosed in data/README.md", fontsize=8)
     fig.savefig(folder / "growth_of_100.png", dpi=170)
     plt.close(fig)
 
@@ -256,16 +300,19 @@ def save_charts(returns, monthly, folder):
     for ticker in TICKERS:
         ax.plot(drawdowns.index, drawdowns[ticker], label=ticker, color=COLORS[ticker])
     ax.set(title="Drawdowns, 2015–2024", ylabel="Loss from previous high",
-           xlabel="Month-end observations")
+           xlabel="Month-end adjusted-price return proxy; intramonth losses excluded")
     ax.yaxis.set_major_formatter(PercentFormatter(1))
     ax.legend(frameon=False, loc="lower left")
     ax.grid(axis="y", alpha=.2)
+    fig.supxlabel("Source: supplied Yahoo-derived monthly returns, January 2015-December 2024; sponsor discrepancies disclosed in data/README.md", fontsize=8)
     fig.savefig(folder / "drawdowns.png", dpi=170)
     plt.close(fig)
 
-    # Chart 3: compare the two capital-call assumptions side by side.
-    fig, axes = plt.subplots(1, 2, figsize=(11, 5.2), layout="constrained", sharey=True)
-    for position, fraction in enumerate(CALL_FRACTIONS):
+    # Use actual scenario values for labels and support one or several scenarios.
+    fractions = list(monthly["call_fraction"].unique())
+    fig, axes_grid = plt.subplots(1, len(fractions), figsize=(5.5 * len(fractions), 5.2), layout="constrained", sharey=True, squeeze=False)
+    axes = axes_grid[0]
+    for position, fraction in enumerate(fractions):
         ax = axes[position]
         scenario = monthly[monthly["call_fraction"] == fraction]
         bond_sales_millions = scenario["bond_sales"] / 1_000_000
@@ -274,11 +321,13 @@ def save_charts(returns, monthly, folder):
         ax.bar(scenario["month"], equity_sales_millions, bottom=bond_sales_millions,
                color=COLORS["SEQUX"], label="Public equity")
         ax.set(title=f"{fraction:.0%} of commitments called", xlabel="Month", xticks=range(1, 13))
+        total_sales = (scenario.bond_sales + scenario.equity_sales).sum() / 1e6
+        ax.text(.03, .97, f"Total gross sales: ${total_sales:,.1f}m", transform=ax.transAxes, va="top", fontsize=9)
         ax.grid(axis="y", alpha=.2)
     axes[0].set_ylabel("Gross assets sold ($ millions)")
     axes[0].legend(frameon=False)
     fig.suptitle("Monthly asset sales under stress")
-    fig.supxlabel("Hypothetical case; equity sales have a 5% cost", fontsize=9)
+    fig.supxlabel(f"Hypothetical joint shock; even monthly calls; no distributions; {EQUITY_SALE_HAIRCUT:.0%} additional equity realization deduction", fontsize=8)
     fig.savefig(folder / "monthly_asset_sales.png", dpi=170)
     plt.close(fig)
 
@@ -287,61 +336,40 @@ def millions(amount):
     return f"${amount / 1_000_000:,.1f} million"
 
 
-def write_findings(performance, allocations, regimes, summary, checks):
-    """Write the investment memo using the calculated results."""
-    base = summary.iloc[0]
-    sensitivity = summary.iloc[1]
-    sales = base.total_bond_sales + base.total_equity_sales
-    extra_sales = sensitivity.total_bond_sales + sensitivity.total_equity_sales - sales
-    table = "| Investment | CAGR | Volatility | Max drawdown | Correlation with SPY |\n|---|---:|---:|---:|---:|\n"
-    for ticker, row in performance.iterrows():
-        table += f"| {ticker} | {row.cagr:.2%} | {row.volatility:.2%} | {row.max_drawdown:.2%} | {row.correlation_with_spy:.2f} |\n"
-    impacts = allocations[allocations.weight == .05].set_index("manager")
-    returns_2022 = regimes[regimes.regime == "2022"].set_index("ticker")
-    flagged_checks = checks[checks["review_needed"]]
-    discrepancies = []
-    for row in flagged_checks.itertuples():
-        description = f"{row.ticker}, {row.period_start} to {row.period_end}: {row.difference_bps:+.2f} bp"
-        discrepancies.append(description)
-    discrepancy_text = "; ".join(discrepancies)
-    memo = f"""# Should the endowment hire an active equity manager?
+def liquidity_sensitivities():
+    """Change one funding assumption at a time around the first documented case."""
+    records = []
+    base = CALL_FRACTIONS[0]
+    cases = [(f"calls_{fraction:.0%}", fraction, MINIMUM_CASH, EQUITY_SALE_HAIRCUT, "even")
+             for fraction in sorted({0, .4, *CALL_FRACTIONS})]
+    cases += [("zero_reserve", base, 0, EQUITY_SALE_HAIRCUT, "even")]
+    cases += [(f"deduction_{haircut:.0%}", base, MINIMUM_CASH, haircut, "even") for haircut in sorted({0, .01, EQUITY_SALE_HAIRCUT})]
+    cases += [("front_loaded_calls", base, MINIMUM_CASH, EQUITY_SALE_HAIRCUT, "front_loaded")]
+    for name, fraction, reserve, haircut, timing in cases:
+        monthly = liquidity_stress(fraction, reserve=reserve, equity_haircut=haircut, call_timing=timing)
+        monthly["call_fraction"] = fraction
+        row = stress_summary(monthly).iloc[0].to_dict()
+        equity_months = monthly.loc[monthly.equity_sales > .01, "month"]
+        row.update({"scenario": name, "cash_target": reserve, "equity_sale_haircut": haircut,
+                    "call_timing": timing, "total_gross_sales": row["total_bond_sales"] + row["total_equity_sales"],
+                    "first_equity_sale_month": int(equity_months.iloc[0]) if not equity_months.empty else 0})
+        records.append(row)
+    return pd.DataFrame(records)
 
-**Research window:** January 2015–December 2024. **Source retrieval:** October 16, 2026.
-**Case:** A hypothetical university endowment with {millions(INITIAL_NAV)} in assets.
 
-## Recommendation
-
-Keep the passive allocation for now. Neither manager's results in this period provide a strong enough reason to replace SPY. A hire would need more evidence about the investment process, portfolio fit and terms. This study compares 0%, 2.5% and 5% allocations to Sequoia or Dodge & Cox, funded by reducing SPY.
-
-## What the returns show
-
-{table}
-Both funds earned less than SPY, with more volatility and deeper month-end losses. The main counterargument is benchmark fit: a value-oriented manager can behave differently from the US large-cap market. In 2022 DODGX returned {returns_2022.loc['DODGX','cumulative_return']:.2%}, compared with {returns_2022.loc['SPY','cumulative_return']:.2%} for SPY. That warrants a closer style comparison; one favorable year does not settle the decision. February–March 2020 results are also in `results/regimes.csv`.
-
-## What changes at 5%?
-
-The case starts with 20% US equity, 10% international equity, 15% bonds, 15% hedge funds, 35% private markets and 5% cash. A 2.5% manager position is {millions(INITIAL_NAV*.025)}, replacing 12.5% of US equity. At 5%, those figures are {millions(INITIAL_NAV*.05)} and 25%.
-
-At 5%, the arithmetic annualized contribution from replacing SPY is {100*impacts.loc['SEQUX','arithmetic_annual_contribution']:.2f} percentage points for SEQUX and {100*impacts.loc['DODGX','arithmetic_annual_contribution']:.2f} for DODGX. The calculation is 12 × average monthly weight × (manager return − SPY return). This is not a compound return for the whole endowment. SPY measures what the endowment gives up, and may not be the best benchmark for evaluating a manager's style. No private-market or hedge-fund return history is modeled.
-
-## Cash requirements under stress
-
-Assume immediate losses of 50% in public equity, 10% in bonds, 25% in hedge funds and 40% in private markets. Annual spending is {millions(ANNUAL_SPENDING)}; 80% of commitments are called evenly over 12 months. There are no distributions or later returns. Bonds are sold first, then equities with a 5% haircut, targeting {millions(MINIMUM_CASH)} of cash. Hedge funds and private assets cannot be sold, and there is no borrowing. All public equity has the same assumed loss, so this is a funding test rather than a manager forecast.
-
-The 80% call case needs {millions(sales)} of gross sales: {millions(base.total_bond_sales)} in bonds and {millions(base.total_equity_sales)} in equities. Costs total {millions(base.total_sale_costs)}. Ending cash is {millions(base.ending_cash)}, unpaid obligations are {millions(base.unpaid_obligations)}, and the largest reserve shortfall is {millions(base.max_reserve_shortfall)}. Ending NAV is {millions(base.ending_nav)}, with {base.private_weight:.2%} in private assets.
-
-Calling 100% requires another {millions(extra_sales)} of sales. Costs rise to {millions(sensitivity.total_sale_costs)}; ending cash is {millions(sensitivity.ending_cash)}. Unpaid obligations are {millions(sensitivity.unpaid_obligations)} and the largest reserve shortfall is {millions(sensitivity.max_reserve_shortfall)}. Calls move money from cash into private investments; spending and sale costs reduce NAV. Paying the bills and keeping enough liquid assets afterward are separate concerns.
-
-## What is still missing?
-
-The unresolved vendor-minus-sponsor differences are {discrepancy_text}. There is no verified SPY sponsor checkpoint. This selected sample of surviving funds uses data retrieved in 2026, with hindsight, share-class and team changes to consider. Month-end observations miss intramonth losses.
-
-Before reconsidering a hire, compare suitable low-cost style alternatives and investigate the current team, process, eligible vehicle, fees, capacity, operations and full holdings. Evidence of a repeatable process and a useful portfolio role could change the recommendation. Those checks are outside this project.
-"""
-    (ROOT / "IC_MEMO.md").write_text(memo, encoding="utf-8")
+def write_findings(performance, allocations, regimes, summary, checks, sensitivities):
+    from reporting import write_memo
+    settings = {"initial_nav": INITIAL_NAV, "spending": ANNUAL_SPENDING,
+                "commitments": UNFUNDED_COMMITMENTS, "reserve": MINIMUM_CASH,
+                "policy": POLICY.copy(), "losses": LOSSES.copy(),
+                "equity_haircut": EQUITY_SALE_HAIRCUT}
+    benchmarks = pd.read_csv(ROOT / "data/benchmark_context.csv")
+    write_memo(ROOT / "IC_MEMO.md", performance, allocations, regimes, summary,
+               checks, sensitivities, settings, benchmarks)
 
 
 def main():
+    validate_assumptions()
     results = ROOT / "results"
     results.mkdir(exist_ok=True)
 
@@ -361,7 +389,7 @@ def main():
                                    "cumulative_return": cumulative_return})
     regimes = pd.DataFrame(period_results)
 
-    # Run the same cash model twice, changing only the fraction of calls.
+    # Run each documented case, then isolate reserve, deduction and timing effects.
     scenarios = []
     for fraction in CALL_FRACTIONS:
         scenario = liquidity_stress(fraction)
@@ -370,15 +398,16 @@ def main():
     monthly = pd.concat(scenarios, ignore_index=True)
     summary = stress_summary(monthly)
     checks = sponsor_comparison(returns)
+    sensitivities = liquidity_sensitivities()
 
     performance.to_csv(results / "performance.csv", float_format="%.12f")
     for name, table in [("allocations", allocations), ("regimes", regimes),
                         ("liquidity_monthly", monthly), ("liquidity_summary", summary),
-                        ("sponsor_comparison", checks)]:
+                        ("sponsor_comparison", checks), ("liquidity_sensitivities", sensitivities)]:
         table.to_csv(results / f"{name}.csv", index=False, float_format="%.12f")
     save_charts(returns, monthly, results)
-    write_findings(performance, allocations, regimes, summary, checks)
-    print("Finished: 120 months, 3 investments, 6 allocation rows and 2 cash scenarios.")
+    write_findings(performance, allocations, regimes, summary, checks, sensitivities)
+    print(f"Finished: {len(returns)} months, {len(TICKERS)} investments, {len(allocations)} allocation rows, {len(summary)} main cash scenarios and {len(sensitivities)} sensitivities.")
     print(performance.round(4).to_string())
     print("Charts and tables are in results/. Findings are in IC_MEMO.md.")
 

@@ -1,6 +1,6 @@
 ﻿# Working through the project
 
-The decision: whether a hypothetical $5 billion endowment should replace passive US equity with Sequoia or Dodge & Cox. The analysis compares returns, allocation contributions, and stressed cash needs.
+This optional appendix works through the historical case: whether a hypothetical $5 billion endowment had sufficient evidence to replace passive US equity with Sequoia Fund or Dodge & Cox Stock Fund. The return comparison and funding stress are separate exercises. Numbers in the examples describe the shipped assumptions; the generated memo displays current scenario facts.
 
 In `analyze.py`, start with `compound_return`, `drawdown`, `performance_table`, `allocation_table`, and `liquidity_stress`. Other functions handle data and output.
 
@@ -66,7 +66,7 @@ The US-equity allocation is 20% of $5 billion, or $1 billion. Manager investment
 | 2.5% | $125 million | 12.5% |
 | 5% | $250 million | 25% |
 
-The total US-equity sleeve stays at 20%; its composition changes.
+The policy funding budget stays at 20%; its composition changes. A fund's foreign holdings can change underlying geographic exposure, even when its budget is classified as US equity.
 
 ```text
 monthly contribution = allocation weight * (manager return - SPY return)
@@ -77,7 +77,7 @@ Suppose a 5% manager allocation earns 2% while SPY earns 1%. The contribution is
 
 An average monthly contribution of 0.05 percentage points annualizes to 0.60 percentage points. This is an arithmetic contribution, not a compounded endowment return. It assumes constant weights and omits the other assets' histories, actual rebalancing, and trading costs.
 
-SPY measures the investment given up. A separate style benchmark may be needed to assess a manager fairly.
+SPY measures the investment given up. Dodge & Cox's sponsor also reports returns against Russell 1000 Value; the memo includes that material context. No factor regression or matched monthly style analysis is present, so these calculations cannot establish manager skill.
 
 ## Cash and investment value
 
@@ -96,7 +96,7 @@ The stress first reduces public equity by 50%, bonds by 10%, hedge funds by 25%,
 
 Spending is `$250m / 12 = $20.83m` monthly. Calls are `$800m / 12 = $66.67m` monthly in the 80% case, or `$1bn / 12 = $83.33m` in the 100% sensitivity.
 
-Bonds are sold first, then equity, to pay obligations and target $125m cash. Obligations take priority over the reserve. Hedge funds and private assets cannot be sold; borrowing is unavailable. Unpaid amounts become arrears instead of negative cash.
+Bonds are sold first, then equity, to pay obligations and target $125m cash. Obligations take priority over the reserve. Hedge funds and private assets cannot be sold; borrowing is unavailable. Unpaid amounts become arrears instead of negative cash and trigger a funding-failure flag; penalties and actual fund-default outcomes are not modeled. The additional 5% equity realization deduction is a stress assumption after the market loss, not an estimate of ordinary trading costs.
 
 ```text
 ending NAV = previous NAV - valuation losses - new spending obligations - equity sale costs
@@ -110,7 +110,9 @@ Private weight is `private NAV / total NAV`. If private assets stay at $100 whil
 
 The charts show historical compounding, month-end drawdowns, and hypothetical asset sales. They do not forecast performance. The stress cannot rank manager downside protection.
 
-Trace one month in `results/liquidity_monthly.csv`, then change spending or calls atop `analyze.py`. Predict the result before rerunning. Compare the tables with [IC_MEMO.md](IC_MEMO.md). Retrospective selection, benchmark fit, sponsor discrepancies, and missing current terms limit the recommendation.
+Trace one month in `results/liquidity_monthly.csv`, then use `results/liquidity_sensitivities.csv` to isolate call size, reserve, realization deduction and call timing. Gross total sales include bonds and equity: the shipped 80% case's $263.2m is equity-only, within $938.2m total. Half those equity sales arise from preserving the cash target.
+
+For experiments, change assumptions atop `analyze.py` in a disposable copy, predict the result and rerun. The memo's numerical descriptions use current assumptions, while this appendix and README describe the shipped case. Review the investment judgment and fixed-case regression expectations after a deliberate case change. Retrospective selection, benchmark fit, sponsor discrepancies, and missing current terms limit the recommendation.
 
 ## Questions to work through
 

@@ -71,5 +71,23 @@
     ],
     "description": "Five transcribed sponsor return checkpoints with source periods and return definitions",
     "sha256": "2370e6f7e82932aac8723159e7f6ef7fb69d87511242b8598c5daca19b2b3170"
+  },
+  {
+    "id": "dodge_cox_2024_presentation",
+    "required_for_analysis": false,
+    "path": "data/raw/dodge_cox_2024_presentation.pdf",
+    "url": "https://www.dodgeandcox.com/content/dam/dc/us/en/pdf/podcast/2024_Annual_U.S._Equity_Review_Presentation.pdf",
+    "kind": "sponsor_document",
+    "description": "Sponsor benchmark context, PDF page 6; checked October 18, 2026. Document not bundled; no original-vintage byte hash asserted."
+  },
+  {
+    "id": "benchmark_context",
+    "path": "data/benchmark_context.csv",
+    "kind": "derived",
+    "input_ids": [
+      "dodge_cox_2024_presentation"
+    ],
+    "description": "Sponsor-reported fund and value-index returns, used as context only; not a monthly benchmark series.",
+    "sha256": "db534beb7edaec39a6953246a988797888a5ae45e5c84bfe44b8d27988385da3"
   }
 ]
