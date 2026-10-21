@@ -8,7 +8,7 @@ In `analyze.py`, start with `compound_return`, `drawdown`, `performance_table`, 
 
 There are 120 monthly observations per investment, January 2015-December 2024. A return of `0.02` means 2%: `100 * 1.02 = $102`.
 
-Cached adjusted-close returns include distributions and embedded fund expenses. Adding dividends or subtracting expenses again counts them twice. Investigate missing months rather than filling them. See [data/README.md](data/README.md) for sources and unresolved sponsor checks.
+Cached adjusted-close returns include distributions and embedded fund expenses. Adding dividends or subtracting expenses again counts them twice. Investigate missing months rather than filling them. See [data/README.md](../data/README.md) for sources and unresolved sponsor checks.
 
 ## Four measures
 
