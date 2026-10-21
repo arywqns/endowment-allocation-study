@@ -147,6 +147,4 @@ The sample contains selected surviving funds and data retrieved after the resear
 
 Before an actual hire, evaluate a matched style alternative, team continuity, process, holdings, fees, eligible vehicle, capacity and operations, and the role in the whole portfolio. The present analysis does not complete those tasks.
 
-- [Learning Guide](docs/LEARNING_GUIDE.md): optional worked examples.
-
 Rates in CSVs are decimals; dollar values are US dollars. Third-party data and publications retain their owners' rights. Their citation or presence in a source register does not grant redistribution rights.
