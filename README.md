@@ -50,7 +50,7 @@ The results highlight the importance of liquidity planning, commitment pacing, a
 - [Analysis Code](analyze.py) — Financial calculations, portfolio scenarios, and stress testing
 - [Verification](verify.py) — Input validation and calculation checks
 - [Results](results/) — Performance tables, scenario outputs, and charts
-- [Learning Guide](LEARNING_GUIDE.md) — Worked explanations of the model and calculations
+- [Learning Guide](docs/LEARNING_GUIDE.md) — Worked explanations of the model and calculations
 
 ## Scope & Limitations
 
@@ -147,6 +147,6 @@ The sample contains selected surviving funds and data retrieved after the resear
 
 Before an actual hire, evaluate a matched style alternative, team continuity, process, holdings, fees, eligible vehicle, capacity and operations, and the role in the whole portfolio. The present analysis does not complete those tasks.
 
-- [LEARNING_GUIDE.md](LEARNING_GUIDE.md): optional worked examples.
+- [Learning Guide](docs/LEARNING_GUIDE.md): optional worked examples.
 
 Rates in CSVs are decimals; dollar values are US dollars. Third-party data and publications retain their owners' rights. Their citation or presence in a source register does not grant redistribution rights.
