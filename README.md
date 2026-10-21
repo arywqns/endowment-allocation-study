@@ -1,14 +1,66 @@
 # Endowment Allocation & Manager Evaluation Study
 
-**Independent historical case | January 2015-December 2024**
+**Independent Investment Research | Python | October 2026**
 
-Would a hypothetical $5 billion endowment have sufficient evidence to replace part of a passive US-equity allocation with Sequoia Fund (SEQUX) or Dodge & Cox Stock Fund Class I (DODGX)?
+An independent research project examining investment manager evaluation, portfolio allocation, and liquidity management from the perspective of a hypothetical $5 billion university endowment.
 
-The study compares 120 monthly returns, evaluates illustrative allocation effects, and runs a separate 12-month funding stress. The case decision is to **retain passive exposure pending further research**. Both funds lagged SPY in the supplied sample, but Dodge & Cox exceeded its sponsor-reported value benchmark over ten years. SPY measures the funding alternative; a manager assessment also requires style, team and implementation evidence.
+The study combines historical fund performance analysis with a hypothetical portfolio liquidity stress test to explore two questions:
 
-Start with the [investment-committee-style memo](IC_MEMO.md). This is a preliminary public-data case, with hypothetical allocations and funding assumptions. No actual endowment assets are managed, and no factor regression or full manager due diligence is claimed.
+1. Does historical performance justify replacing part of a passive U.S. equity allocation with an actively managed fund?
+2. How might an endowment meet spending obligations and private-market capital calls during a severe market downturn?
 
-![Growth of $100](results/growth_of_100.png)
+## Investment Analysis
+
+### Manager Evaluation
+
+Compared Sequoia Fund (SEQUX) and Dodge & Cox Stock Fund (DODGX) against SPY using 120 monthly observations from January 2015 through December 2024.
+
+The analysis examines:
+- Compound annual returns and volatility
+- Maximum drawdowns and correlation
+- Performance across selected market environments
+- Illustrative allocation effects at different portfolio weights
+- Benchmark selection and limitations of historical performance
+
+**Key Finding:** Both funds underperformed SPY over the historical sample. However, Dodge & Cox outperformed its sponsor-reported value benchmark over the same ten-year period, illustrating why benchmark selection matters when evaluating manager skill.
+
+**Investment Conclusion:** Retain passive exposure pending further due diligence. Historical performance alone provides insufficient evidence to recommend replacing the passive allocation.
+
+### Endowment Liquidity Stress Test
+
+Developed a 12-month liquidity model for a hypothetical $5 billion endowment experiencing severe market losses alongside ongoing spending obligations and private-market capital calls.
+
+The model incorporates:
+- A hypothetical multi-asset endowment portfolio
+- Annual university spending of $250 million
+- Private-market capital commitments
+- Stressed asset valuations and liquidity constraints
+- Asset sales required to fund obligations
+- Sensitivity analysis across funding assumptions
+
+**Key Finding:** Under the specified severe scenario with 80% of opening commitments called, the portfolio requires approximately $938 million in gross asset sales, including $263 million in public equity sales.
+
+The results highlight the importance of liquidity planning, commitment pacing, and maintaining sufficient flexibility to support an institution's long-term mission.
+
+## Tools & Deliverables
+
+**Languages & Libraries:** Python, pandas, Matplotlib
+
+- [Investment Committee Memo](IC_MEMO.md) — Research findings, assumptions, investment recommendation, and supporting analysis
+- [Analysis Code](analyze.py) — Financial calculations, portfolio scenarios, and stress testing
+- [Verification](verify.py) — Input validation and calculation checks
+- [Results](results/) — Performance tables, scenario outputs, and charts
+- [Learning Guide](LEARNING_GUIDE.md) — Worked explanations of the model and calculations
+
+## Scope & Limitations
+
+This is an independent educational research project using public historical data and hypothetical portfolio assumptions. It does not represent actual endowment holdings or investment decisions.
+
+The analysis is preliminary. It does not establish manager alpha or constitute full investment manager due diligence. Additional work would require style-matched benchmarks, qualitative manager research, operational due diligence, and implementation analysis.
+
+See the investment committee memo and data documentation for detailed assumptions, source information, and limitations.
+
+![Historical Growth of $100](results/growth_of_100.png)
 
 ## Reproduce the supplied-input analysis
 
