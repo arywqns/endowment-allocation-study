@@ -147,14 +147,6 @@ The sample contains selected surviving funds and data retrieved after the resear
 
 Before an actual hire, evaluate a matched style alternative, team continuity, process, holdings, fees, eligible vehicle, capacity and operations, and the role in the whole portfolio. The present analysis does not complete those tasks.
 
-## Files
-
-- analyze.py: financial calculations, charts and scenario assumptions.
-- reporting.py: memo generated from current assumptions and results.
-- verify.py: return, source, accounting, sensitivity and reporting checks.
-- prepare_data.py: optional original-raw reconstruction and diagnostics.
-- data/: three input tables and provenance.
-- results/: seven CSVs and three charts.
 - [LEARNING_GUIDE.md](LEARNING_GUIDE.md): optional worked examples.
 
 Rates in CSVs are decimals; dollar values are US dollars. Third-party data and publications retain their owners' rights. Their citation or presence in a source register does not grant redistribution rights.
